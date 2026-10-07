@@ -1,0 +1,617 @@
+<title>Final Buzzer Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: phone-first single column (max 480px, centered on desktop). Trip setup → Escape Window → map + time → route → signals; incident detail in a bottom sheet. */
+:root {
+  --bg: #e9edf1; --surface: #ffffff; --ground: #f7f9fb; --block: #dfe5eb; --water: #cddfee; --park: #d3e7d3;
+  --ink: #13202c; --muted: #5b6876; --line: #d3dae2;
+  --accent: #0b63b0; --accent-soft: #e1edf8; --orange: #e9761a; --orange-soft: #fdeedf;
+  --red: #d23a2a; --red-soft: #fbe4e0; --amber: #c98a00; --amber-soft: #fbf0d6;
+  --green: #2a8a55; --green-soft: #ddf1e5; --grey: #8a96a2;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b1116; --surface: #161e26; --ground: #11181f; --block: #232d38; --water: #13283a; --park: #1b3123;
+  --ink: #e5ecf2; --muted: #93a1ae; --line: #2a3540;
+  --accent: #5aa8ec; --accent-soft: #17304a; --orange: #ff9a45; --orange-soft: #3a2614;
+  --red: #f06a58; --red-soft: #3c1f1b; --amber: #eeb73a; --amber-soft: #3a2e10;
+  --green: #5cc184; --green-soft: #173426; --grey: #7c8995; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0b1116; --surface: #161e26; --ground: #11181f; --block: #232d38; --water: #13283a; --park: #1b3123;
+  --ink: #e5ecf2; --muted: #93a1ae; --line: #2a3540;
+  --accent: #5aa8ec; --accent-soft: #17304a; --orange: #ff9a45; --orange-soft: #3a2614;
+  --red: #f06a58; --red-soft: #3c1f1b; --amber: #eeb73a; --amber-soft: #3a2e10;
+  --green: #5cc184; --green-soft: #173426; --grey: #7c8995; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); padding-inline: 16px; padding-block: 0 24px; }
+.app { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+/* Top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding: 12px 0 8px; display: flex; align-items: center; gap: 10px; }
+.top h1 { font: 700 24px/1 var(--font-display); text-transform: uppercase; margin: 0; margin-right: auto; }
+.top h1 span { color: var(--orange); }
+.clock { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; font: 600 14px var(--font-mono); }
+.clock i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+.clock.fc i { background: var(--amber); } .clock.past i { background: var(--grey); }
+.clock small { font: 600 10px var(--font-body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+/* Trip setup */
+.from { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.from b { font-weight: 600; }
+.pin { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); flex: none; }
+.dests { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 0 14px 2px; }
+.dests::-webkit-scrollbar { display: none; }
+.dest { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 11px; text-align: left; display: flex; flex-direction: column; line-height: 1.2; }
+.dest b { font-size: 14px; } .dest span { font-size: 11px; color: var(--muted); }
+.dest[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--bg); border-radius: 12px; padding: 3px; gap: 3px; }
+.modes button { border: 0; background: none; padding: 9px 4px; border-radius: 9px; font-weight: 600; font-size: 14px; display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.modes button small { font-size: 11px; font-weight: 500; color: var(--muted); font-family: var(--font-mono); }
+.modes button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 18%, transparent); }
+.modes button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Escape window */
+.ew { background: var(--ink); color: var(--surface); border: 0; }
+.ew .k { color: var(--orange); }
+.ew h2 { font: 700 30px/1 var(--font-display); margin: 0; text-wrap: balance; }
+.ew p { margin: 0; font-size: 14px; opacity: .85; }
+.ew .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ew .cmp div { background: color-mix(in srgb, var(--surface) 10%, transparent); border-radius: 10px; padding: 8px 10px; }
+.ew .cmp div.win { background: var(--orange); color: var(--ink); }
+.ew .cmp small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .8; }
+.ew .cmp b { font: 700 22px/1.1 var(--font-display); }
+.bars { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; height: 96px; align-items: end; }
+.bar { border: 0; background: none; padding: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; color: var(--surface); }
+.bar i { display: block; background: color-mix(in srgb, var(--surface) 35%, transparent); border-radius: 4px 4px 0 0; }
+.bar.best i { background: var(--orange); }
+.bar.cur i { box-shadow: 0 0 0 2px var(--accent); }
+.bar .v, .bar .x { font: 500 10px var(--font-mono); text-align: center; opacity: .8; }
+.bar.best .v { color: var(--orange); opacity: 1; font-weight: 700; }
+
+/* Map */
+.mapcard { padding: 8px; }
+svg.map { display: block; width: 100%; height: auto; max-width: 100%; border-radius: 10px; }
+.map .ground { fill: var(--ground); } .map .blk { fill: var(--block); } .map .water { fill: var(--water); } .map .park { fill: var(--park); }
+.map .bway { stroke: var(--block); stroke-width: 8; fill: none; }
+.map .lbl { fill: var(--muted); font: 600 17px var(--font-body); }
+.map .lm { fill: var(--ink); font: 600 18px var(--font-body); paint-order: stroke; stroke: var(--ground); stroke-width: 4px; }
+.map .msg { fill: var(--surface); stroke: var(--orange); stroke-width: 4; }
+.map .stn { fill: var(--surface); stroke: var(--ink); stroke-width: 3; }
+.map .stn.pick { fill: var(--accent); stroke: var(--surface); }
+.map .stn.off { stroke: var(--red); stroke-dasharray: 4 3; }
+.map .inc { fill: none; stroke-linecap: round; }
+.map .inc.closed, .map .inc.crowd { stroke: var(--red); stroke-width: 12; }
+.map .inc.congested { stroke: var(--amber); stroke-width: 12; }
+.map .inc.unverified { stroke: var(--grey); stroke-width: 9; stroke-dasharray: 5 8; }
+.map .inc.cleared, .map .inc.fclear { stroke: var(--green); stroke-width: 9; }
+.map .inc.fclear { stroke-dasharray: 12 6; }
+.map .hit { stroke: transparent; stroke-width: 40; fill: none; cursor: pointer; }
+.map .pt { stroke-width: 4; cursor: pointer; }
+.map .pt.closed { fill: var(--red-soft); stroke: var(--red); }
+.map .pt.unverified { fill: none; stroke: var(--grey); stroke-dasharray: 4 4; }
+.map .pt.cleared { fill: none; stroke: var(--green); }
+.map .route-bg { fill: none; stroke: var(--surface); stroke-width: 14; stroke-linejoin: round; stroke-linecap: round; }
+.map .route { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; }
+.map .origin { fill: var(--orange); stroke: var(--surface); stroke-width: 3; }
+.map .dst { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); padding: 2px 4px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.sw { width: 16px; height: 5px; border-radius: 3px; display: inline-block; }
+.time { display: flex; flex-direction: column; gap: 4px; padding: 4px 4px 2px; }
+.time input { width: 100%; accent-color: var(--accent); height: 28px; }
+.ticks { display: flex; justify-content: space-between; font: 11px var(--font-mono); color: var(--muted); }
+.ticks b { color: var(--orange); }
+.row { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 9px 12px; border-radius: 10px; font-weight: 600; font-size: 13px; flex: 1; }
+
+/* Route */
+.route-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.route-h h3 { font: 700 22px/1.1 var(--font-display); margin: 0; }
+.route-h .mins { font: 700 22px var(--font-display); color: var(--accent); white-space: nowrap; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.steps li:first-child { border-top: 0; }
+.steps li::before { content: counter(s); counter-increment: s; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 700 12px var(--font-mono); display: grid; place-items: center; }
+.alts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.alts li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+.alts li.pick { background: var(--accent-soft); }
+.alts li.no { color: var(--muted); }
+.alts .why { font-size: 12px; color: var(--muted); display: block; }
+.alts .t { font: 600 13px var(--font-mono); white-space: nowrap; }
+.note { font-size: 13px; border-radius: 10px; padding: 8px 10px; background: var(--bg); color: var(--muted); margin: 0; }
+.note.ok { background: var(--green-soft); color: var(--ink); }
+
+/* Signals */
+.sig { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sig button { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); padding: 9px 0; display: flex; flex-direction: column; gap: 3px; }
+.sig li:first-child button { border-top: 0; }
+.sig .meta { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.sig .txt { font-size: 14px; }
+.src { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; }
+.src.official { background: var(--accent); color: var(--surface); }
+.src.report { background: var(--orange); color: var(--surface); }
+.src.photo { background: var(--block); color: var(--ink); }
+.src.text { border: 1px solid var(--line); color: var(--muted); }
+.src.deny, .src.reopen { background: var(--green); color: var(--surface); }
+.chip { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; display: inline-block; }
+.chip.closed, .chip.crowd { background: var(--red-soft); color: var(--red); }
+.chip.congested { background: var(--amber-soft); color: var(--amber); }
+.chip.unverified { background: var(--block); color: var(--muted); }
+.chip.cleared, .chip.fclear, .chip.debunked { background: var(--green-soft); color: var(--green); }
+.more { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 4px 0 0; text-align: left; }
+
+/* Bottom sheet */
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center; pointer-events: none; }
+.sheet .in { pointer-events: auto; width: 100%; max-width: 480px; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 30px color-mix(in srgb, var(--ink) 25%, transparent); max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); align-self: center; }
+.sheet h3 { font: 700 22px/1.1 var(--font-display); margin: 0 0 4px; }
+.sheet .hd { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.close { border: 0; background: var(--bg); width: 36px; height: 36px; border-radius: 50%; font-size: 20px; line-height: 1; flex: none; }
+.meter { height: 8px; border-radius: 4px; background: var(--block); position: relative; overflow: hidden; }
+.meter i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 4px; }
+.meter b { position: absolute; top: 0; bottom: 0; left: 70%; width: 2px; background: var(--ink); }
+table.calc { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.calc td, table.calc th { padding: 5px 2px; border-bottom: 1px solid var(--line); text-align: left; }
+table.calc th { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+table.calc td.n { text-align: right; font-family: var(--font-mono); }
+.formula { font: 11px var(--font-mono); color: var(--muted); margin: 0; }
+.about { font-size: 14px; }
+.about summary { cursor: pointer; padding: 4px 0; }
+.about:not([open]) { gap: 0; }
+.about h2 { font: 700 24px/1.1 var(--font-display); margin: 0; text-wrap: balance; }
+.about h3 { font: 700 18px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .03em; margin: 6px 0 0; color: var(--accent); }
+.about p, .about ul, .about ol { margin: 0; }
+.about ul, .about ol { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+@media (prefers-reduced-motion: no-preference) { .sheet .in { animation: up .2s ease-out; } @keyframes up { from { transform: translateY(30px); opacity: 0; } } }
+</style>
+
+<div class="app">
+  <div class="top">
+    <h1>Final <span>Buzzer</span></h1>
+    <span class="clock" id="clock"><i></i><span id="clockT">11:15</span><small id="clockM">live</small></span>
+  </div>
+
+  <section class="card">
+    <div class="from"><i class="pin"></i><span>From <b>Madison Square Garden</b> · Knicks win it all at 10:30 PM</span></div>
+    <div class="k">Where to?</div>
+    <div class="dests" id="dests" role="group" aria-label="Destination"></div>
+    <div class="modes" id="modes" role="group" aria-label="How are you getting there"></div>
+  </section>
+
+  <section class="card ew" id="ew"></section>
+
+  <section class="card mapcard">
+    <svg class="map" id="map" viewBox="0 0 720 600" role="img" aria-label="Simplified Midtown street grid with closures and your route"></svg>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--red)"></i>Closed / crowd</span>
+      <span><i class="sw" style="background:var(--amber)"></i>Gridlock</span>
+      <span><i class="sw" style="background:repeating-linear-gradient(90deg,var(--grey) 0 4px,transparent 4px 8px)"></i>Unverified</span>
+      <span><i class="sw" style="background:var(--green)"></i>Reopened</span>
+    </div>
+    <div class="time">
+      <input type="range" id="t" min="0" max="90" step="1" value="45" aria-label="Preview time">
+      <div class="ticks"><span>10:30</span><b>11:15 now</b><span>12:00</span></div>
+      <div class="row"><button class="btn" id="play">▶ Replay from buzzer</button><button class="btn" id="now">Back to now</button></div>
+    </div>
+  </section>
+
+  <section class="card" id="route"></section>
+  <section class="card"><div class="k" id="sigK">Signals</div><ul class="sig" id="sig"></ul><button class="more" id="more" hidden></button></section>
+
+  <details class="card about" id="about">
+    <summary class="k">About this prototype · how it works, data sources, research</summary>
+    <h2>Final Buzzer: crowd-aware routing home after a championship at Madison Square Garden</h2>
+    <p><b>Final Buzzer</b> is a mobile-first, real-time egress planner for fans leaving a major event in Midtown Manhattan. Pick where you're going and how you're traveling: walk, transit (subway, PATH, LIRR, NJ Transit) or drive. The app fuses official alerts, social media posts and on-site reports into <b>confidence-scored street closures</b>. It reroutes you around the closures it trusts and tells you <b>when to leave</b>, not just which way to go.</p>
+    <p class="note">Built for the Plug and Play × PMAI Hackathon, Challenge 2: "Knicks win the championship. Get fans home safely from MSG." All data in this prototype is mocked. The scenario is a home title clinch at MSG, which ends at 10:30 PM. "Now" is 11:15 PM.</p>
+
+    <h3>The problem</h3>
+    <ul>
+      <li>MSG holds 19,812 fans for basketball and sits directly on top of Penn Station, the busiest station in North America at roughly 600,000 riders a day.</li>
+      <li>When the Knicks won the 2026 title on June 13, they clinched on the road in San Antonio. Even so, tens of thousands of fans filled Midtown from 5th to 9th Ave. Press reports counted 63 arrests and 10 officers injured. An ambulance could not get through the crowd to reach a teenager who had been shot near 43rd St and Broadway.</li>
+      <li>In May 2026, a watch party at 33rd St and 7th Ave drew about 6,000 people (NYPD estimate). The crowd blocked 33rd St, 34th St and 7th Ave.</li>
+      <li>Similar nights elsewhere: the Toronto Raptors parade in 2019 drew about 2 million people and shut subway stations for overcrowding, stranding thousands of commuters.</li>
+      <li>A home title clinch at MSG would put all of that right on top of Penn Station. Nobody knows which streets are actually closed, and rumors spread faster than official alerts.</li>
+    </ul>
+
+    <h3>Hero feature 1: the Escape Window ("delay to save time")</h3>
+    <p>For every departure time from now to +45 minutes, Final Buzzer adds up four parts:</p>
+    <ul>
+      <li>the forecast queue to exit the arena (or the parking garage);</li>
+      <li>the walk or drive through the streets that are still open;</li>
+      <li>the forecast platform crowding at each station;</li>
+      <li>the ride itself.</li>
+    </ul>
+    <p>It then recommends the departure that gets you home <b>earliest</b>. Often the answer is "wait 15–25 minutes and leave later." Crowds clear faster than you can push through them, so waiting can mean arriving sooner while spending far less time in the crush. Research on crowd evacuation backs this up: a 2020 study in <i>Royal Society Open Science</i> found that staggering exits based on live conditions cut peak crowd density by about 35% and added only about 5% to total exit time. Every staggered departure also takes pressure off the crowd for everyone else. No consumer navigation app we found tells you to "leave later, arrive sooner."</p>
+
+    <h3>Hero feature 2: destination-aware station choice</h3>
+    <p>Choose a destination: Upper West Side, Hoboken, Brooklyn, Long Island or Murray Hill. For each destination, the app compares every reasonable station. For example:</p>
+    <ul>
+      <li>Penn Station's 7th Ave entrance (1/2/3, LIRR) against its 8th Ave entrance (A/C/E);</li>
+      <li>Moynihan Train Hall, 34 St–Herald Sq (B/D/F/M/N/Q/R/W), Times Sq–42 St, 28 St, and PATH at 33rd St or 23rd St.</li>
+    </ul>
+    <p>Each station is scored on walk time around confirmed closures, forecast platform crowding and train time. If an entrance is exit-only, or the only way to reach a station is through a crowd surge, the app rules that station out and shows why. Drivers get tunnel choices instead (Lincoln vs Holland, Queens–Midtown). Each travel mode shows only the incidents that matter for it: a closed subway entrance doesn't clutter a driver's map, and car gridlock doesn't clutter a walker's.</p>
+
+    <h3>How confidence works: the JEV fusion model</h3>
+    <p>Every incident gathers signals from several sources. Each signal has a base weight:</p>
+    <ul>
+      <li>official agency alerts (NYPD, MTA, Port Authority): 0.95, with no decay;</li>
+      <li>on-site reports from app users: 0.40;</li>
+      <li>posts with photos: 0.35;</li>
+      <li>text-only posts: 0.15.</li>
+    </ul>
+    <p>Non-official signals lose weight over time, with a 60-minute time constant. The signals are combined with a <b>noisy-OR</b>: conf = 1 − ∏(1 − wᵢ·e^(−ageᵢ/τ)).</p>
+    <ul>
+      <li>An incident becomes "confirmed" and blocks routing at a confidence of 0.70 or more.</li>
+      <li>An official denial marks a rumor as debunked. In the demo, the "Lincoln Tunnel closed?" rumor is ignored at confidence 0.15 and then debunked by Port Authority.</li>
+      <li>An official reopen clears the incident.</li>
+    </ul>
+    <p>The <b>Jev</b> decision model is used as the per-post classifier. It reads each post or report, extracts the location and incident type, and judges how credible it is. The transparent fusion formula above produces the final score. You can tap any incident to see its full calculation, source by source. The model is explainable rather than a black box.</p>
+    <p>Planned improvements:</p>
+    <ul>
+      <li>Count duplicate reposts of the same post only once.</li>
+      <li>Weight each reporter by how accurate their past reports turned out to be.</li>
+      <li>Forecast when each crowd will clear, using camera-based crowd counts and outflow rates.</li>
+    </ul>
+
+    <h3>Mock APIs in this demo, and the real feeds they stand in for</h3>
+    <ul>
+      <li><b>Street closures:</b> NYC Open Data street closures (Socrata API) plus 511NY events. Official, machine-readable and free.</li>
+      <li><b>Traffic speeds:</b> the NYC DOT Traffic Speeds feed, updated about every 5 minutes. This is the source for the 8th Ave gridlock signal.</li>
+      <li><b>Transit status:</b> MTA GTFS-Realtime feeds for subway, LIRR and Metro-North, with service alerts (no API key). NJ Transit GTFS-RT. A community PATH realtime feed. These provide entrance closures such as "Penn 7th Ave exit-only" and platform delays.</li>
+      <li><b>Crowd signal:</b> NYC DOT traffic camera stills around 31st–34th St, run through a vision crowd-count model.</li>
+      <li><b>Social:</b> the Bluesky Jetstream firehose, which is free and real-time, filtered by keyword and location (MSG, Penn, 7th Ave, 34th St). X was left out of the MVP because of its streaming cost.</li>
+      <li><b>Official accounts:</b> NYPD, Notify NYC and Port Authority posts, monitored as official signals.</li>
+      <li><b>Routing:</b> in production, a self-hosted Valhalla router, with each confirmed closure passed in as an area to avoid. This prototype runs Dijkstra on a simplified Midtown grid with the same avoid rules.</li>
+    </ul>
+    <p>Why mock them? The demo has to be repeatable: the same scripted 45 minutes after the buzzer, replayable with the time slider. Each mock is shaped like the real feed's records (source, timestamp, location, text), so swapping in a live feed is an adapter, not a redesign.</p>
+
+    <h3>Try the demo</h3>
+    <ol>
+      <li>Pick <b>Brooklyn → Transit</b>. Penn's 7th Ave entrance is exit-only and Herald Sq is cut off by the 34th St crowd surge. Leaving now, the app walks you south to the quiet 28 St station. The Escape Window says wait about 20 minutes: by then the A/C/E platforms at Penn's 8th Ave entrance have cleared, and you get home sooner. Tap the later bars to watch the station choice change and Herald Sq reopen in the forecast.</li>
+      <li>Pick <b>Hoboken → Drive</b>. You'll see the Lincoln Tunnel rumor ignored, then debunked.</li>
+      <li>Press <b>Replay from buzzer</b> to watch confidence build as posts, photos and on-site reports arrive.</li>
+    </ol>
+
+    <h3>Who it's for</h3>
+    <ul>
+      <li>Fans leaving MSG on foot, by transit or by car.</li>
+      <li>Families who need a calm, low-crowd route.</li>
+      <li>Venue and city operations teams, who benefit when departures are spread out and emergency lanes stay clear.</li>
+    </ul>
+    <p>The same engine works for any large event at any venue: concerts, World Cup matches at MetLife, New Year's Eve, parades.</p>
+    <p class="note">Keywords: Knicks championship, Madison Square Garden, Penn Station, crowd management, event egress, real-time routing, street closures, confidence scoring, rumor detection, social media signals, transit recommendations, NYC subway, PATH, LIRR, Lincoln Tunnel, Escape Window, leave later arrive sooner, JEV decision model, noisy-OR fusion, AI for public safety, smart city mobility.</p>
+  </details>
+</div>
+<div class="sheet" id="sheet" hidden><div class="in" id="sheetIn" role="dialog" aria-label="Incident detail"></div></div>
+
+<script>
+const NOW = 45, THRESH = 0.7, TAU = 60;
+const W = { official: 0.95, report: 0.4, photo: 0.35, text: 0.15 };
+const SRC = { official: 'Official', report: 'On-site', photo: 'Photo post', text: 'Social post', deny: 'Official denial', reopen: 'Official reopen' };
+const AVES = ['11th', '10th', '9th', '8th', '7th', '6th', '5th', 'Madison', 'Park'], AX = [60, 140, 220, 300, 380, 460, 540, 600, 660];
+const ST0 = 23, ST1 = 45;
+const y = st => 40 + (ST1 - st) * 24;
+const stOf = yy => ST1 - (yy - 40) / 24;
+const P = (a, st) => [AX[AVES.indexOf(a)], y(st)];
+const clock = t => { const m = 630 + t, h = Math.floor(m / 60) % 12 || 12; return `${h}:${String(m % 60).padStart(2, '0')}`; };
+const ord = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+const aveName = x => AVES[AX.indexOf(x)] + ' Ave';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- Incidents (official + social + on-site), scored by the JEV confidence model ----------
+const ALL = ['walk', 'transit', 'drive'];
+const INCIDENTS = [
+  { id: 'i1', name: '7th Ave closed, 31st–34th St', kind: 'closed', seg: [P('7th', 31), P('7th', 34)], blocks: ALL, clearAt: 75,
+    est: 'Frozen zone around MSG. NYPD typically lifts it once the arena empties: about 11:45 PM.',
+    src: [{ t: 5, type: 'official', who: 'NYPD', text: 'Frozen zone: 7th Ave closed 31st–34th St.' }] },
+  { id: 'i2', name: 'W 33rd St fan exit zone', kind: 'closed', seg: [P('8th', 33), P('7th', 33)], blocks: ALL, clearAt: 40,
+    est: 'Reopened by NYPD at 11:10 PM.',
+    src: [{ t: 0, type: 'official', who: 'NYPD', text: 'W 33rd St between 7th and 8th Ave closed for exiting fans.' },
+          { t: 40, type: 'reopen', who: 'NYPD', text: 'W 33rd St reopened to pedestrians.' }] },
+  { id: 'i3', name: '34th St crowd surge, 6th–8th Ave', kind: 'crowd', seg: [P('8th', 34), P('6th', 34)], blocks: ALL, clearAt: 70,
+    est: 'Camera estimate: ~2,400 people, outflow ~300 per 5 min. Expected to clear around 11:40 PM.',
+    src: [{ t: 12, type: 'text', who: '@knicksfan_88', text: '34th is PACKED, can’t move, people climbing bus shelters' },
+          { t: 18, type: 'photo', who: '@mollyinmidtown', text: 'Photo: fans filling 34th St outside Macy’s' },
+          { t: 22, type: 'report', who: 'App user near 7th Ave', text: 'Crowd blocking 34th St at 7th Ave, not moving.' },
+          { t: 26, type: 'report', who: 'App user near 6th Ave', text: 'Police holding pedestrians at 34th & 6th.' },
+          { t: 36, type: 'report', who: 'App user at Herald Sq', text: 'Still packed at 34th & Broadway.' }] },
+  { id: 'i4', name: 'Penn Station 7th Ave entrance exit-only', kind: 'closed', pt: P('7th', 32), blocks: ['transit'], clearAt: 80,
+    est: 'MTA usually reopens entrances once platform crowding drops: about 11:50 PM.',
+    src: [{ t: 15, type: 'official', who: 'MTA', text: 'Penn Station 7th Ave entrances (1/2/3, LIRR) exit-only until further notice.' }] },
+  { id: 'i5', name: 'Times Square celebration, 42nd St', kind: 'crowd', seg: [P('8th', 42), P('6th', 42)], blocks: ALL, clearAt: 110,
+    est: 'Crowd still growing (~6,000). Not expected to clear before 12:30 AM.',
+    src: [{ t: 20, type: 'text', who: '@hellskitchenhank', text: 'Everyone heading to Times Sq right now' },
+          { t: 24, type: 'text', who: '@bkbrooke', text: 'Times Square is insane, confetti everywhere' },
+          { t: 30, type: 'report', who: 'App user at 42nd & 7th', text: 'Can’t get through 42nd St on foot.' },
+          { t: 38, type: 'official', who: 'NYPD', text: 'Times Square closed to vehicles, 6th–8th Ave.' }] },
+  { id: 'i6', name: '8th Ave gridlock, 35th–41st St', kind: 'congested', seg: [P('8th', 35), P('8th', 41)], blocks: ['drive'], clearAt: 65,
+    est: 'Traffic camera: ~40 vehicles per block at 3 mph. Back to normal around 11:35 PM.',
+    src: [{ t: 28, type: 'report', who: 'Driver', text: '8th Ave not moving above 34th.' },
+          { t: 31, type: 'report', who: 'Rideshare driver', text: '15 minutes to go 4 blocks on 8th.' },
+          { t: 33, type: 'photo', who: '@nyc_cabbie', text: 'Photo: brake lights up 8th Ave' },
+          { t: 40, type: 'report', who: 'Driver', text: 'Still bumper to bumper at 8th & 38th.' }] },
+  { id: 'i7', name: 'Lincoln Tunnel closed?', kind: 'closed', pt: P('10th', 40), blocks: ['drive'], clearAt: 999,
+    est: 'Port Authority confirmed the tunnel is open.',
+    src: [{ t: 26, type: 'text', who: '@nyc_traffic_now', text: 'BREAKING: Lincoln Tunnel shut down after Knicks win??' },
+          { t: 34, type: 'deny', who: 'Port Authority', text: 'Lincoln Tunnel is open. Expect delays.' }] },
+];
+const BLOCKING = ['closed', 'crowd', 'congested'];
+const STATUS = { closed: 'Closed', crowd: 'Crowd blocking', congested: 'Gridlock', unverified: 'Unverified', cleared: 'Reopened', fclear: 'Forecast: reopened', debunked: 'Debunked' };
+
+function judge(inc, T) {
+  const eff = Math.min(T, NOW), seen = inc.src.filter(s => s.t <= eff);
+  if (!seen.length) return null;
+  const parts = seen.filter(s => W[s.type]).map(s => ({ s, w: s.type === 'official' ? W.official : W[s.type] * Math.exp(-(eff - s.t) / TAU) }));
+  const conf = 1 - parts.reduce((p, c) => p * (1 - c.w), 1);
+  let status;
+  if (seen.some(s => s.type === 'deny')) status = 'debunked';
+  else if (seen.some(s => s.type === 'reopen')) status = 'cleared';
+  else if (T > NOW && inc.clearAt <= T && conf >= THRESH) status = 'fclear';
+  else status = conf >= THRESH ? inc.kind : 'unverified';
+  return { conf, status, parts };
+}
+
+// ---------- Stations, destinations, crowd-dissipation forecast ----------
+// peak = extra minutes of queueing / platform crowding at NOW; clear = minutes after the buzzer when it is gone.
+const STATIONS = {
+  penn7: { at: P('7th', 32), name: 'Penn Station · 7th Ave', lines: '1 2 3 · LIRR', peak: 35, clear: 90 },
+  penn8: { at: P('8th', 31), name: 'Penn Station · 8th Ave', lines: 'A C E', peak: 30, clear: 75 },
+  moyn: { at: P('8th', 33), name: 'Moynihan Train Hall', lines: 'LIRR · NJ Transit', peak: 40, clear: 85 },
+  herald: { at: P('6th', 34), name: '34 St–Herald Sq', lines: 'B D F M N Q R W', peak: 30, clear: 80 },
+  path33: { at: P('6th', 33), name: 'PATH · 33rd St', lines: 'PATH', peak: 35, clear: 80 },
+  path23: { at: P('6th', 23), name: 'PATH · 23rd St', lines: 'PATH', peak: 8, clear: 60 },
+  times: { at: P('7th', 42), name: 'Times Sq–42 St', lines: '1 2 3 7 N Q R W', peak: 45, clear: 120 },
+  st28: { at: P('7th', 28), name: '28 St', lines: '1', peak: 6, clear: 60 },
+};
+const START = P('8th', 32), GARAGE = P('9th', 31);
+const EXIT = { walk: [14, 75], transit: [25, 75], drive: [60, 90] };   // arena exit crowd / garage queue
+const DESTS = [
+  { id: 'uws', name: 'Upper West Side', sub: '86th St', walk: { at: P('9th', 45), extra: 42, label: 'Continue up Amsterdam Ave to 86th St' },
+    transit: [{ st: 'penn7', ride: 12, how: 'Take the 1 uptown to 86 St' }, { st: 'penn8', ride: 14, how: 'Take the C uptown to 86 St' },
+              { st: 'times', ride: 9, how: 'Take the 1 uptown to 86 St' }, { st: 'st28', ride: 15, how: 'Take the 1 uptown to 86 St' }],
+    drive: [{ at: P('11th', 45), extra: 14, name: 'West Side Hwy north' }] },
+  { id: 'hob', name: 'Hoboken, NJ', sub: 'Hoboken Terminal', walk: null,
+    transit: [{ st: 'path33', ride: 16, how: 'Take PATH to Hoboken' }, { st: 'path23', ride: 13, how: 'Take PATH to Hoboken' }],
+    drive: [{ at: P('10th', 40), extra: 12, name: 'Lincoln Tunnel' }, { at: P('10th', 23), extra: 22, name: 'Holland Tunnel' }] },
+  { id: 'bk', name: 'Brooklyn', sub: 'Barclays Center', walk: null,
+    transit: [{ st: 'penn7', ride: 22, how: 'Take the 2 or 3 to Atlantic Av' }, { st: 'herald', ride: 18, how: 'Take the B, D, N or Q to Atlantic Av' },
+              { st: 'penn8', ride: 24, how: 'Take the A or C to Hoyt–Schermerhorn' }, { st: 'st28', ride: 26, how: 'Take the 1, switch to the 2/3 at 14 St' }],
+    drive: [{ at: P('10th', 23), extra: 26, name: 'West Side Hwy south, Battery Tunnel' }] },
+  { id: 'li', name: 'Long Island', sub: 'Jamaica', walk: null,
+    transit: [{ st: 'moyn', ride: 21, how: 'Take the LIRR to Jamaica' }, { st: 'penn7', ride: 21, how: 'Take the LIRR to Jamaica' }],
+    drive: [{ at: P('Park', 36), extra: 30, name: 'Queens–Midtown Tunnel' }] },
+  { id: 'mh', name: 'Murray Hill', sub: 'Park Ave & 38th', walk: { at: P('Park', 38), extra: 0, label: 'Arrive at Park Ave & 38th St' },
+    transit: null, drive: [{ at: P('Park', 38), extra: 2, name: 'Park Ave & 38th St' }] },
+];
+const MODES = { walk: 'Walk', transit: 'Transit', drive: 'Drive' };
+const q = (peak, clear, d) => peak * Math.pow(Math.max(0, Math.min(1, (clear - d) / (clear - NOW))), 2);
+
+// ---------- Routing on the street grid: Dijkstra with a small turn penalty, skipping confirmed blocking incidents ----------
+const onInc = (inc, [px, py]) => {
+  if (inc.pt) return inc.pt[0] === px && inc.pt[1] === py;
+  const [[x1, y1], [x2, y2]] = inc.seg;
+  return y1 === y2 ? py === y1 && px >= Math.min(x1, x2) && px <= Math.max(x1, x2) : px === x1 && py >= Math.min(y1, y2) && py <= Math.max(y1, y2);
+};
+function search(mode, T, from) {
+  const blocks = INCIDENTS.map(inc => ({ inc, j: judge(inc, T) })).filter(({ inc, j }) => j && inc.blocks.includes(mode) && BLOCKING.includes(j.status));
+  const blockedBy = p => blocks.find(b => b.inc.pt && onInc(b.inc, p)) || blocks.find(b => onInc(b.inc, p));
+  const per = mode === 'drive' ? 0.5 : 1, DIRS = [[-1, 0], [1, 0], [0, 1], [0, -1]];
+  const key = (a, s, d) => `${a},${s},${d}`, dist = new Map(), prev = new Map(), done = new Set();
+  const start = [AX.indexOf(from[0]), stOf(from[1]), -1], open = [[0, ...start]];
+  dist.set(key(...start), 0);
+  while (open.length) {   // ponytail: linear-scan priority queue, fine for ~800 states
+    let bi = 0; for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i;
+    const [du, ai, st, d] = open.splice(bi, 1)[0], ku = key(ai, st, d);
+    if (done.has(ku)) continue; done.add(ku);
+    DIRS.forEach(([da, ds], nd) => {
+      const na = ai + da, ns = st + ds;
+      if (na < 0 || na >= AX.length || ns < ST0 || ns > ST1 || blockedBy([AX[na], y(ns)])) return;
+      const c = du + (da ? Math.abs(AX[na] - AX[ai]) / 24 : 1) * per + (d >= 0 && d !== nd ? 0.4 : 0), kv = key(na, ns, nd);
+      if (c < (dist.get(kv) ?? Infinity)) { dist.set(kv, c); prev.set(kv, [ai, st, d]); open.push([c, na, ns, nd]); }
+    });
+  }
+  return { to(p) {
+    const b = blockedBy(p); if (b) return { blocked: b };
+    const a = AX.indexOf(p[0]), s = stOf(p[1]);
+    let best = null; [-1, 0, 1, 2, 3].forEach(d => { const v = dist.get(key(a, s, d)); if (v !== undefined && (!best || v < best.v)) best = { v, d }; });
+    if (!best) return { blocked: null };
+    const path = []; for (let c = [a, s, best.d]; c; c = prev.get(key(...c))) path.unshift([AX[c[0]], y(c[1])]);
+    return { mins: best.v, path };
+  } };
+}
+function stepsOf(path, verb) {
+  const out = [];
+  for (let i = 1; i < path.length;) {
+    const vert = path[i][0] === path[i - 1][0]; let j = i;
+    while (j + 1 < path.length && (path[j + 1][0] === path[j][0]) === vert) j++;
+    const a = path[i - 1], b = path[j];
+    out.push(vert ? `${verb} ${b[1] < a[1] ? 'north' : 'south'} on ${aveName(a[0])} to ${ord(stOf(b[1]))} St`
+                  : `${verb} ${b[0] > a[0] ? 'east' : 'west'} on ${ord(stOf(a[1]))} St to ${aveName(b[0])}`);
+    i = j + 1;
+  }
+  return out;
+}
+
+// One plan for (destination, mode, departure time d): best option + every option compared
+function plan(dest, mode, d) {
+  if (!dest[mode]) return null;
+  const exit = q(...EXIT[mode], d);
+  if (mode === 'walk') {
+    const r = search('walk', d, START).to(dest.walk.at);
+    if (!r.path) return { total: null };
+    return { total: Math.round(exit + r.mins + dest.walk.extra), path: r.path, end: dest.walk.at, title: `Walk to ${dest.name}`,
+      steps: ['Leave MSG by the 8th Ave doors', ...stepsOf(r.path, 'Walk'), dest.walk.label], parts: [['Exit crowd', exit], ['Walk', r.mins + dest.walk.extra]] };
+  }
+  const isT = mode === 'transit', s = search(mode, d, isT ? START : GARAGE);
+  const opts = dest[mode].map(o => {
+    const at = isT ? STATIONS[o.st].at : o.at, r = s.to(at);
+    if (!r.path) return { o, at, blocked: r.blocked, total: null };
+    const crowd = isT ? q(STATIONS[o.st].peak, STATIONS[o.st].clear, d) : 0;
+    return { o, at, path: r.path, mins: r.mins, crowd, total: Math.round(exit + r.mins + crowd + (isT ? o.ride : o.extra)) };
+  });
+  const best = opts.filter(o => o.total != null).sort((a, b) => a.total - b.total)[0];
+  if (!best) return { total: null, opts };
+  const name = isT ? STATIONS[best.o.st].name : best.o.name;
+  return { total: best.total, path: best.path, end: best.at, best, opts, title: isT ? `Go to ${name}` : `Drive via ${name}`,
+    steps: isT ? ['Leave MSG by the 8th Ave doors', ...stepsOf(best.path, 'Walk'), `Enter ${name} (${STATIONS[best.o.st].lines})`, best.o.how]
+               : ['Leave the 9th Ave & 31st St garage', ...stepsOf(best.path, 'Drive'), `Continue via ${name}`],
+    parts: isT ? [['Exit crowd', exit], ['Walk', best.mins], ['Platform wait', best.crowd], ['Train', best.o.ride]]
+               : [['Garage queue', exit], ['Midtown streets', best.mins], ['Beyond the map', best.o.extra]] };
+}
+
+// ---------- State + rendering ----------
+const S = { T: NOW, dest: 'uws', mode: 'transit', sel: null, all: false };
+const D = () => DESTS.find(d => d.id === S.dest);
+const relevant = inc => inc.blocks.includes(S.mode);
+
+function renderTrip() {
+  document.getElementById('dests').innerHTML = DESTS.map(d => `<button class="dest" data-dest="${d.id}" aria-pressed="${d.id === S.dest}"><b>${d.name}</b><span>${d.sub}</span></button>`).join('');
+  document.getElementById('modes').innerHTML = Object.entries(MODES).map(([k, l]) => {
+    const p = plan(D(), k, NOW);
+    const sub = !p ? (k === 'walk' ? 'too far' : 'n/a') : p.total == null ? 'blocked' : p.total + ' min';
+    return `<button data-mode="${k}" aria-pressed="${k === S.mode}" ${p ? '' : 'disabled'}>${l}<small>${sub}</small></button>`;
+  }).join('');
+}
+
+function renderEW() {
+  const rows = [];
+  for (let k = 0; k < 10; k++) { const d = NOW + k * 5, p = plan(D(), S.mode, d); rows.push({ d, total: p.total, arrive: p.total != null ? d + p.total : null }); }
+  const ok = rows.filter(r => r.total != null), el = document.getElementById('ew'), now = rows[0];
+  if (!ok.length) { el.innerHTML = `<div class="k">Escape window</div><h2>No open route in the next 45 min</h2><p>Try another way home.</p>`; return; }
+  const best = ok.reduce((b, r) => r.arrive < b.arrive ? r : b), max = Math.max(...ok.map(r => r.total)), wait = best.d - NOW;
+  let h = `<div class="k">Escape window · ${MODES[S.mode]} to ${esc(D().name)}</div>`;
+  if (wait > 0 && now.total != null) h += `<h2>Wait ${wait} min. Leave at ${clock(best.d)}.</h2><p>The crowd clears faster than you’d push through it: home ${now.arrive - best.arrive} min sooner, ${now.total - best.total} fewer minutes in the crush.</p>
+      <div class="cmp"><div><small>Leave now</small><b>${now.total} min</b><br><span class="mono">home ${clock(now.arrive)}</span></div><div class="win"><small>Leave ${clock(best.d)}</small><b>${best.total} min</b><br><span class="mono">home ${clock(best.arrive)}</span></div></div>`;
+  else if (wait > 0) h += `<h2>Wait ${wait} min. Leave at ${clock(best.d)}.</h2><p>Every route is blocked right now. The first opening gets you home by ${clock(best.arrive)}.</p>`;
+  else h += `<h2>Leave now.</h2><p>Waiting won’t get you home sooner on this route. ${best.total} min door to door, home by ${clock(best.arrive)}.</p>`;
+  h += `<div class="bars" role="group" aria-label="Door-to-door minutes by departure time">${rows.map(r => {
+      const x = `<span class="x">${r.d === NOW ? 'now' : '+' + (r.d - NOW)}</span>`;
+      return r.total == null ? `<button class="bar${r.d === S.T ? ' cur' : ''}" data-d="${r.d}" aria-label="Leave ${clock(r.d)}: blocked"><span class="v">✕</span><i style="height:2%"></i>${x}</button>`
+        : `<button class="bar${r === best ? ' best' : ''}${r.d === S.T ? ' cur' : ''}" data-d="${r.d}" aria-label="Leave ${clock(r.d)}: ${r.total} minutes"><span class="v">${r.total}</span><i style="height:${r.total / max * 100}%"></i>${x}</button>`;
+    }).join('')}</div><p style="font-size:12px">Door-to-door minutes by departure time. Tap a bar to preview that moment.</p>`;
+  el.innerHTML = h;
+}
+
+function renderMap(p) {
+  const g = [`<rect class="ground" width="720" height="600"/>`, `<rect class="water" width="34" height="600"/>`];
+  for (let i = 0; i < AX.length - 1; i++) for (let s = ST0; s < ST1; s++)
+    g.push(`<rect class="blk" x="${AX[i] + 4}" y="${y(s + 1) + 3}" width="${AX[i + 1] - AX[i] - 8}" height="18" rx="2"/>`);
+  g.push(`<rect class="park" x="464" y="${y(42) + 3}" width="72" height="42"/>`, `<rect class="park" x="544" y="${y(26) + 3}" width="52" height="66"/>`);
+  g.push(`<polyline class="bway" points="380,${y(45)} 460,${y(34)} 540,${y(23)}"/>`);
+  g.push(`<ellipse class="msg" cx="340" cy="${y(32)}" rx="34" ry="21"/><text class="lm" x="340" y="${y(32) + 6}" text-anchor="middle">MSG</text>`);
+  [['Times Sq', 392, y(44) + 6, 'start'], ['Herald Sq', 472, y(35) + 6, 'start'], ['Bryant Pk', 500, y(41) + 6, 'middle'],
+   ['Hudson Yards', 100, y(31) + 6, 'middle'], ['Lincoln Tunnel', 140, y(42) + 6, 'middle']]
+    .forEach(([t, cx, cy, a]) => g.push(`<text class="lm" x="${cx}" y="${cy}" text-anchor="${a}">${t}</text>`));
+  AVES.forEach((n, i) => g.push(`<text class="lbl" x="${AX[i]}" y="22" text-anchor="middle">${n === 'Madison' ? 'Mad' : n}</text>`));
+  for (let s = 24; s <= 44; s += 2) g.push(`<text class="lbl" x="714" y="${y(s) + 6}" text-anchor="end">${s}</text>`);
+  for (const inc of INCIDENTS) {
+    if (!relevant(inc)) continue;
+    const j = judge(inc, S.T); if (!j || j.status === 'debunked') continue;
+    if (inc.pt) {
+      const cls = BLOCKING.includes(j.status) ? 'closed' : j.status === 'unverified' ? 'unverified' : 'cleared';
+      g.push(`<circle class="pt ${cls}" cx="${inc.pt[0]}" cy="${inc.pt[1]}" r="18" data-i="${inc.id}"><title>${esc(inc.name)}</title></circle>`);
+    } else {
+      const [[x1, y1], [x2, y2]] = inc.seg;
+      g.push(`<line class="inc ${j.status}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line class="hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" data-i="${inc.id}"><title>${esc(inc.name)}</title></line>`);
+    }
+  }
+  if (p && p.path) { const pts = p.path.map(c => c.join(',')).join(' '); g.push(`<polyline class="route-bg" points="${pts}"/><polyline class="route" points="${pts}"/>`); }
+  if (S.mode === 'transit') D().transit.forEach(o => {
+    const st = STATIONS[o.st], x = p.opts && p.opts.find(z => z.o === o), pick = p.best && p.best.o === o;
+    g.push(`<circle class="stn${pick ? ' pick' : x && x.total == null ? ' off' : ''}" cx="${st.at[0]}" cy="${st.at[1]}" r="${pick ? 12 : 9}"><title>${st.name}</title></circle>`);
+  });
+  const o = S.mode === 'drive' ? GARAGE : START;
+  g.push(`<circle class="origin" cx="${o[0]}" cy="${o[1]}" r="10"/>`);
+  if (p && p.end && S.mode !== 'transit') g.push(`<circle class="dst" cx="${p.end[0]}" cy="${p.end[1]}" r="11"/>`);
+  document.getElementById('map').innerHTML = g.join('');
+}
+
+function renderRoute(p) {
+  const el = document.getElementById('route');
+  if (p.total == null) { el.innerHTML = `<div class="k">Your route</div><p class="note">No open route at ${clock(S.T)}. Every option is blocked by a confirmed incident.</p>`; return; }
+  let h = `<div class="k">Your route · leaving ${clock(S.T)}${S.T > NOW ? ' (forecast)' : ''}</div>
+    <div class="route-h"><h3>${esc(p.title)}</h3><span class="mins">${p.total} min</span></div>
+    <p class="note mono" style="font-size:12px">${p.parts.map(([l, m]) => `${l} ${Math.round(m)}`).join(' + ')} · home ${clock(S.T + p.total)}</p>
+    <ol class="steps">${p.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`;
+  if (p.opts && p.opts.length > 1) {
+    h += `<div class="k">${S.mode === 'transit' ? 'Stations compared' : 'Crossings compared'}</div><ul class="alts">${p.opts.slice().sort((a, b) => (a.total ?? 999) - (b.total ?? 999)).map(x => {
+      const name = S.mode === 'transit' ? `${STATIONS[x.o.st].name} <span class="mono" style="font-size:11px">${STATIONS[x.o.st].lines}</span>` : esc(x.o.name);
+      const why = x.total == null ? (x.blocked ? `Blocked: ${esc(x.blocked.inc.name)}` : 'No open path')
+        : S.mode === 'transit' ? `walk ${Math.round(x.mins)} · platform wait ${Math.round(x.crowd)} · train ${x.o.ride}` : `streets ${Math.round(x.mins)} · then ${x.o.extra}`;
+      return `<li class="${x === p.best ? 'pick' : x.total == null ? 'no' : ''}"><span>${name}<span class="why">${why}</span></span><span class="t">${x.total == null ? '✕' : x.total + ' min'}</span></li>`;
+    }).join('')}</ul>`;
+  }
+  const rumor = judge(INCIDENTS.find(i => i.id === 'i7'), S.T);
+  if (S.mode === 'drive' && D().id === 'hob' && rumor) h += rumor.status === 'debunked'
+    ? `<p class="note ok">Lincoln Tunnel rumor debunked by Port Authority. Route kept.</p>`
+    : `<p class="note">Ignoring an unverified Lincoln Tunnel rumor (confidence ${rumor.conf.toFixed(2)}, below ${THRESH}).</p>`;
+  el.innerHTML = h;
+}
+
+function renderSignals() {
+  const eff = Math.min(S.T, NOW);
+  const items = INCIDENTS.filter(relevant).flatMap(inc => inc.src.filter(s => s.t <= eff).map(s => ({ inc, s }))).sort((a, b) => b.s.t - a.s.t);
+  document.getElementById('sigK').textContent = `Signals for ${MODES[S.mode].toLowerCase()} · ${items.length}`;
+  document.getElementById('sig').innerHTML = items.length ? (S.all ? items : items.slice(0, 4)).map(({ inc, s }) => {
+    const j = judge(inc, S.T);
+    return `<li><button data-i="${inc.id}"><span class="meta"><span class="src ${s.type}">${SRC[s.type]}</span><span class="mono">${clock(s.t)}</span><span>${esc(s.who)}</span></span>
+      <span class="txt">${esc(s.text)}</span><span class="meta">${esc(inc.name)} <span class="chip ${j.status}">${STATUS[j.status]}</span></span></button></li>`;
+  }).join('') : '<li class="note">The game just ended. No signals yet.</li>';
+  const more = document.getElementById('more');
+  more.hidden = items.length <= 4; more.textContent = S.all ? 'Show fewer' : `Show all ${items.length}`;
+}
+
+function renderSheet() {
+  const box = document.getElementById('sheet'), inc = INCIDENTS.find(i => i.id === S.sel), j = inc && judge(inc, S.T);
+  box.hidden = !j; if (!j) return;
+  document.getElementById('sheetIn').innerHTML = `<div class="grab"></div>
+    <div class="hd"><div><h3>${esc(inc.name)}</h3><span class="chip ${j.status}">${STATUS[j.status]}</span></div><button class="close" data-close aria-label="Close">×</button></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px"><span>JEV confidence</span><b class="mono">${j.conf.toFixed(2)}</b></div>
+    <div class="meter"><i style="width:${Math.min(100, j.conf * 100)}%"></i><b title="Threshold ${THRESH}"></b></div>
+    <table class="calc"><thead><tr><th>Source</th><th>At</th><th style="text-align:right">Weight now</th></tr></thead><tbody>
+    ${j.parts.map(p => `<tr><td>${SRC[p.s.type]} · ${esc(p.s.who)}</td><td class="mono">${clock(p.s.t)}</td><td class="n">${p.w.toFixed(2)}</td></tr>`).join('')}
+    ${inc.src.filter(s => (s.type === 'deny' || s.type === 'reopen') && s.t <= Math.min(S.T, NOW)).map(s => `<tr><td>${SRC[s.type]} · ${esc(s.who)}</td><td class="mono">${clock(s.t)}</td><td class="n">override</td></tr>`).join('')}
+    </tbody></table>
+    <p class="formula">conf = 1 − ∏(1 − wᵢ·e^(−ageᵢ/${TAU}m)); official w=${W.official}, no decay. Confirmed at ≥ ${THRESH}.</p>
+    <p class="note">${esc(inc.est)}</p>`;
+}
+
+function render() {
+  const T = S.T;
+  document.getElementById('clockT').textContent = clock(T);
+  document.getElementById('clockM').textContent = T > NOW ? `+${T - NOW} forecast` : T < NOW ? 'replay' : 'live';
+  document.getElementById('clock').className = 'clock' + (T > NOW ? ' fc' : T < NOW ? ' past' : '');
+  document.getElementById('t').value = T;
+  const p = plan(D(), S.mode, T);
+  renderTrip(); renderEW(); renderMap(p); renderRoute(p); renderSignals(); renderSheet();
+}
+
+let playT;
+const stop = () => clearInterval(playT);
+document.getElementById('t').oninput = e => { stop(); S.T = +e.target.value; render(); };
+document.getElementById('now').onclick = () => { stop(); S.T = NOW; render(); };
+document.getElementById('play').onclick = () => { stop(); S.T = 0; render(); playT = setInterval(() => { S.T++; render(); if (S.T >= NOW) stop(); }, 150); };
+document.getElementById('more').onclick = () => { S.all = !S.all; render(); };
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-dest],[data-mode],[data-d],[data-i],[data-close]'); if (!t) return;
+  if (t.dataset.dest) { S.dest = t.dataset.dest; if (!D()[S.mode]) S.mode = Object.keys(MODES).find(m => D()[m]); }
+  else if (t.dataset.mode) S.mode = t.dataset.mode;
+  else if (t.dataset.d) { stop(); S.T = +t.dataset.d; }
+  else if (t.dataset.i) S.sel = S.sel === t.dataset.i ? null : t.dataset.i;
+  else S.sel = null;
+  if (S.sel && !relevant(INCIDENTS.find(i => i.id === S.sel))) S.sel = null;
+  render();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.sel) { S.sel = null; render(); } });
+render();
+</script>
