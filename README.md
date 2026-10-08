@@ -1,5 +1,14 @@
 # Final Buzzer Map
 
+**Live demo:** https://claude.ai/artifact/PpAobzRDSrPcYSV9ptZ5Ev
+
+## All three hackathon prototypes
+
+- [Lume Host Stand](https://claude.ai/artifact/6nJLPbVyaKm9xERGnJzfbZ) (Challenge 1: Resy goes offline, host stand floor plan) · [repo](https://github.com/mz462/resy-offline-host-stand)
+- [Final Buzzer Map](https://claude.ai/artifact/PpAobzRDSrPcYSV9ptZ5Ev) (Challenge 2: MSG egress planner) · [repo](https://github.com/mz462/final-buzzer-map)
+- [Delta911](https://claude.ai/artifact/2hJqrzwKqr1ZJniXYSiiLw) (Challenge 3: 911 call-surge triage) · [repo](https://github.com/mz462/delta911)
+
+
 A mobile-first egress planner for fans leaving Madison Square Garden after a Knicks championship. Built for the Plug and Play × PMAI Hackathon, Challenge 2.
 
 Open `index.html` in any browser. It's a single file with no build step, and all data is mocked.
